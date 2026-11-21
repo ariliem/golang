@@ -1,11 +1,14 @@
 package analyzer
 
+import "sync"
+
 type TaskRepository interface {
 	Save(task *Task)
 	GetByID(id int) (*Task, error)
 }
 
 type InMemoryStorage struct {
+	mu    sync.RWMutex
 	tasks map[int]*Task
 }
 
@@ -16,6 +19,9 @@ func NewInMemoryStorage() *InMemoryStorage {
 }
 
 func (s *InMemoryStorage) Save(task *Task) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	taskCopy := *task
 	if task.Result != nil {
 		resCopy := *task.Result
@@ -25,6 +31,9 @@ func (s *InMemoryStorage) Save(task *Task) {
 }
 
 func (s *InMemoryStorage) GetByID(id int) (*Task, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
 	task, exists := s.tasks[id]
 	if !exists {
 		return nil, ErrTaskNotFound
